@@ -113,7 +113,7 @@ public class OkHttp extends Client {
     public ParsedResponse get(String link, Map<String, String> params) throws IOException {
         Response response = call(new Request.Builder().url(link + requestToString(params)).get());
         setHeader(HEADER_REFERER, link);
-        return parse(response);
+        return parse(link, response);
     }
 
     @Override
@@ -129,7 +129,7 @@ public class OkHttp extends Client {
 
         Response response = call(new Request.Builder().url(link).post(body.build()));
         setHeader(HEADER_REFERER, link);
-        return parse(response);
+        return parse(link, response);
     }
 
     @Override
@@ -151,14 +151,14 @@ public class OkHttp extends Client {
         }
     }
 
-    private ParsedResponse parse(Response response) throws IOException {
+    private ParsedResponse parse(String link, Response response) throws IOException {
         ResponseBody body = response.body();
 
         if (body == null) {
             throw new IOException("Response body is null! Code: " + response.code());
         }
 
-        return new ParsedResponse(this, body.string(), response.code());
+        return new ParsedResponse(this, link, body.string(), response.code());
     }
 
     private class InterceptedCookieJar implements CookieJar {

@@ -34,12 +34,12 @@ public class ParsedResponse {
     private Document document;
     private int code;
 
-    public ParsedResponse(Client client, String html, int code) {
+    public ParsedResponse(Client client, String url, String html, int code) {
         this.client = client;
         this.html = html;
 
         if (html != null && !html.isEmpty()) {
-            this.document = Jsoup.parse(this.html);
+            document = Jsoup.parse(html, url);
 
             // Clean-up useless tags: <script>, <style>
             document.getElementsByTag("script").remove();
@@ -50,7 +50,7 @@ public class ParsedResponse {
     }
 
     public ParsedResponse(String html) {
-        this(null, html, 200);
+        this(null, "", html, 200);
     }
 
     public Client save() {
