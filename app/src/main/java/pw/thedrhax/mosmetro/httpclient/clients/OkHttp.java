@@ -20,8 +20,6 @@ package pw.thedrhax.mosmetro.httpclient.clients;
 
 import android.content.Context;
 
-import org.jsoup.Jsoup;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -40,65 +38,18 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import pw.thedrhax.mosmetro.httpclient.Client;
+import pw.thedrhax.mosmetro.httpclient.ParsedResponse;
 import pw.thedrhax.util.AndroidHacks;
 import pw.thedrhax.util.Logger;
-import pw.thedrhax.util.Randomizer;
-import pw.thedrhax.util.Util;
 
 public class OkHttp extends Client {
-    private Context context = null;
     private OkHttpClient client;
     private Call last_call = null;
-    private Randomizer random;
 
     public OkHttp(Context context) {
-        client = new OkHttpClient.Builder()
-                // Store cookies for this session
-                .cookieJar(new CookieJar() {
-                    private HashMap<HttpUrl, List<Cookie>> cookies = new HashMap<>();
-
-                    private HttpUrl getHost (HttpUrl url) {
-                        return HttpUrl.parse("http://" + url.host());
-                    }
-
-                    @Override
-                    public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
-                        HttpUrl host = getHost(url);
-                        List<Cookie> url_cookies = loadForRequest(host);
-                        // TODO: You can do better, come on!
-                        for (Cookie cookie : cookies) {
-                            List<Cookie> for_deletion = new ArrayList<>();
-                            for (Cookie old_cookie : url_cookies) {
-                                if (cookie.name().equals(old_cookie.name()))
-                                    for_deletion.add(old_cookie);
-                            }
-                            for (Cookie old_cookie : for_deletion) {
-                                url_cookies.remove(old_cookie);
-                            }
-                            url_cookies.add(cookie);
-                            Logger.log(Logger.LEVEL.DEBUG, String.format(
-                                    "CookieJar | Add: %s = %s",
-                                    cookie.name(), cookie.value()
-                            ));
-                        }
-                        this.cookies.put(host, url_cookies);
-                    }
-
-                    @Override
-                    public List<Cookie> loadForRequest(HttpUrl url) {
-                        HttpUrl host = getHost(url);
-                        List<Cookie> url_cookies = cookies.get(host);
-                        return (url_cookies != null) ? url_cookies : new ArrayList<Cookie>();
-                    }
-                })
-                .build();
-
-        // TODO: Move this to Client
-        this.context = context;
-        int timeout = Util.getIntPreference(context, "pref_timeout", 5);
-        if (timeout != 0) setTimeout(timeout * 1000);
-
-        random = new Randomizer(context);
+        super(context);
+        client = new OkHttpClient.Builder().cookieJar(new InterceptedCookieJar()).build();
+        configure();
     }
 
     @Override
@@ -159,16 +110,14 @@ public class OkHttp extends Client {
     }
 
     @Override
-    public Client get(String link, Map<String, String> params) throws IOException {
-        parseDocument(call(
-                new Request.Builder().url(link + requestToString(params)).get()
-        ));
+    public ParsedResponse get(String link, Map<String, String> params) throws IOException {
+        Response response = call(new Request.Builder().url(link + requestToString(params)).get());
         setHeader(HEADER_REFERER, link);
-        return this;
+        return parse(response);
     }
 
     @Override
-    public Client post(String link, Map<String, String> params) throws IOException {
+    public ParsedResponse post(String link, Map<String, String> params) throws IOException {
         FormBody.Builder body = new FormBody.Builder();
 
         if (params != null) {
@@ -178,23 +127,18 @@ public class OkHttp extends Client {
             }
         }
 
-        parseDocument(call(
-                new Request.Builder().url(link).post(body.build())
-        ));
+        Response response = call(new Request.Builder().url(link).post(body.build()));
         setHeader(HEADER_REFERER, link);
-        return this;
+        return parse(response);
     }
 
     @Override
     public InputStream getInputStream(String link) throws IOException {
-        Response response = call(
-                new Request.Builder().url(link).get()
-        );
+        Response response = call(new Request.Builder().url(link).get());
         ResponseBody body = response.body();
-        code = response.code();
 
         if (body == null) {
-            throw new IOException("Empty response: " + code);
+            throw new IOException("Empty response: " + response.code());
         }
 
         return body.byteStream();
@@ -207,25 +151,50 @@ public class OkHttp extends Client {
         }
     }
 
-    private void parseDocument (Response response) throws IOException {
+    private ParsedResponse parse(Response response) throws IOException {
         ResponseBody body = response.body();
 
         if (body == null) {
-            throw new IOException("Response body is null!");
+            throw new IOException("Response body is null! Code: " + response.code());
         }
 
-        raw_document = body.string();
-        code = response.code();
-        body.close();
+        return new ParsedResponse(this, body.string(), response.code());
+    }
 
-        if (raw_document == null || raw_document.isEmpty()) {
-            return;
+    private class InterceptedCookieJar implements CookieJar {
+        private HashMap<HttpUrl, List<Cookie>> cookies = new HashMap<>();
+
+        private HttpUrl getHost (HttpUrl url) {
+            return HttpUrl.parse("http://" + url.host());
         }
 
-        document = Jsoup.parse(raw_document, response.request().url().toString());
+        @Override
+        public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
+            HttpUrl host = getHost(url);
+            List<Cookie> url_cookies = loadForRequest(host);
+            for (Cookie cookie : cookies) {
+                List<Cookie> for_deletion = new ArrayList<>();
+                for (Cookie old_cookie : url_cookies) {
+                    if (cookie.name().equals(old_cookie.name()))
+                        for_deletion.add(old_cookie);
+                }
+                for (Cookie old_cookie : for_deletion) {
+                    url_cookies.remove(old_cookie);
+                }
+                url_cookies.add(cookie);
+                Logger.log(Logger.LEVEL.DEBUG, String.format(
+                        "CookieJar | Add: %s = %s",
+                        cookie.name(), cookie.value()
+                ));
+            }
+            this.cookies.put(host, url_cookies);
+        }
 
-        // Clean-up useless tags: <script>, <style>
-        document.getElementsByTag("script").remove();
-        document.getElementsByTag("style").remove();
+        @Override
+        public List<Cookie> loadForRequest(HttpUrl url) {
+            HttpUrl host = getHost(url);
+            List<Cookie> url_cookies = cookies.get(host);
+            return (url_cookies != null) ? url_cookies : new ArrayList<Cookie>();
+        }
     }
 }

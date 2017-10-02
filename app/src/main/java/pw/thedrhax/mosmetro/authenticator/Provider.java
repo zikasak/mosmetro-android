@@ -34,6 +34,7 @@ import pw.thedrhax.mosmetro.authenticator.providers.MosMetroV1;
 import pw.thedrhax.mosmetro.authenticator.providers.MosMetroV2;
 import pw.thedrhax.mosmetro.authenticator.providers.Unknown;
 import pw.thedrhax.mosmetro.httpclient.Client;
+import pw.thedrhax.mosmetro.httpclient.ParsedResponse;
 import pw.thedrhax.mosmetro.httpclient.clients.OkHttp;
 import pw.thedrhax.util.Listener;
 import pw.thedrhax.util.Logger;
@@ -97,16 +98,16 @@ public abstract class Provider extends LinkedList<Task> {
     /**
      * Find Provider using already received response from server.
      * @param context   Android Context required to create the new instance.
-     * @param response    Client, that contains server's response.
+     * @param response  Instance of ParsedResponse.
      * @return          New Provider instance.
      *
      * @see Client
      */
-    @NonNull public static Provider find(Context context, Client response) {
+    @NonNull public static Provider find(Context context, ParsedResponse response) {
         for (Class<? extends Provider> provider_class : PROVIDERS) {
             try {
                 if ((Boolean)provider_class
-                        .getMethod("match", Client.class)
+                        .getMethod("match", ParsedResponse.class)
                         .invoke(null, response))
                     return provider_class
                             .getConstructor(Context.class)
@@ -132,13 +133,13 @@ public abstract class Provider extends LinkedList<Task> {
 
         generate_204(client);
         Logger.log(Logger.LEVEL.DEBUG,
-                "Provider: generate_204() = " + client.getResponseCode()
+                "Provider: generate_204() = " + client.response().getResponseCode()
         );
 
-        Provider result = Provider.find(context, client);
+        Provider result = Provider.find(context, client.response());
 
-        if (result instanceof Unknown && client.getResponseCode() != 204) {
-            Logger.log(Logger.LEVEL.DEBUG, client.getPage());
+        if (result instanceof Unknown && client.response().getResponseCode() != 204) {
+            Logger.log(Logger.LEVEL.DEBUG, client.response().getPage());
             Logger.log(context.getString(R.string.error,
                     context.getString(R.string.auth_error_provider)
             ));
@@ -181,18 +182,18 @@ public abstract class Provider extends LinkedList<Task> {
      */
     public static boolean generate_204(Client client) {
         try {
-            client.get(GENERATE_204_HTTP, null);
+            client.get(GENERATE_204_HTTP, null).save();
         } catch (IOException ex) {
             Logger.log(Logger.LEVEL.DEBUG, ex);
         }
-        if (client.getResponseCode() != 204) return false;
+        if (client.response().getResponseCode() != 204) return false;
 
         try {
-            client.get(GENERATE_204_HTTPS, null);
+            client.get(GENERATE_204_HTTPS, null).save();
         } catch (IOException ex) {
             Logger.log(Logger.LEVEL.DEBUG, ex);
         }
-        return client.getResponseCode() == 204;
+        return client.response().getResponseCode() == 204;
     }
 
     /**

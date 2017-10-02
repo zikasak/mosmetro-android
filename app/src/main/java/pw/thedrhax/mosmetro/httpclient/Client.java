@@ -18,21 +18,19 @@
 
 package pw.thedrhax.mosmetro.httpclient;
 
+import android.content.Context;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 
 import pw.thedrhax.util.Listener;
 import pw.thedrhax.util.RandomUserAgent;
+import pw.thedrhax.util.Randomizer;
+import pw.thedrhax.util.Util;
 
 public abstract class Client {
     public static final String HEADER_ACCEPT = "Accept";
@@ -40,18 +38,24 @@ public abstract class Client {
     public static final String HEADER_REFERER = "Referer";
     public static final String HEADER_CSRF = "X-CSRF-Token";
 
-    protected Document document;
-    protected Map<String,String> headers;
-    protected String raw_document = "";
-    protected int code = 200;
+    protected Map<String,String> headers = new HashMap<>();
+    protected Context context;
+    protected Randomizer random;
+    protected ParsedResponse last_response = new ParsedResponse(this, "", 200);
 
-    protected Client() {
-        headers = new HashMap<>();
+    protected Client(Context context) {
+        this.context = context;
+    }
+
+    protected void configure() {
+        random = new Randomizer(context);
 
         setHeader(HEADER_USER_AGENT, RandomUserAgent.getRandomUserAgent());
-        setHeader(HEADER_ACCEPT,
-                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-        );
+        setHeader(HEADER_ACCEPT, "text/html,application/xhtml+xml," +
+                "application/xml;q=0.9,image/webp,*/*;q=0.8");
+
+        int timeout = Util.getIntPreference(context, "pref_timeout", 5);
+        if (timeout >= 0) setTimeout(timeout * 1000);
     }
 
     // Settings methods
@@ -66,8 +70,7 @@ public abstract class Client {
     }
 
     public Client resetHeaders () {
-        headers = new HashMap<>();
-        return this;
+        headers = new HashMap<>(); return this;
     }
 
     public abstract Client setCookie(String url, String name, String value);
@@ -76,45 +79,30 @@ public abstract class Client {
     public abstract Client setTimeout(int ms);
 
     // IO methods
-    public abstract Client get(String link, Map<String,String> params) throws IOException;
-    public abstract Client post(String link, Map<String,String> params) throws IOException;
+    public abstract ParsedResponse get(String link, Map<String,String> params) throws IOException;
+    public abstract ParsedResponse post(String link, Map<String,String> params) throws IOException;
     public abstract InputStream getInputStream(String link) throws IOException;
 
-    // Retry methods
-    private abstract class RetryOnException<T> {
-        T run(int retries) throws IOException {
-            IOException last_ex = null;
-            for (int i = 0; i < retries; i++) {
-                try {
-                    return body();
-                } catch (IOException ex) {
-                    last_ex = ex;
-                    if (running.get()) {
-                        SystemClock.sleep(1000);
-                    } else {
-                        break;
-                    }
-                }
-            }
-            throw last_ex;
-        }
-        public abstract T body() throws IOException;
+    @NonNull
+    public ParsedResponse response() {
+        return last_response;
     }
 
-    public Client get(final String link, final Map<String,String> params,
+    // Retry methods
+    public ParsedResponse get(final String link, final Map<String,String> params,
                       int retries) throws IOException {
-        return new RetryOnException<Client>() {
+        return new RetryOnException<ParsedResponse>() {
             @Override
-            public Client body() throws IOException {
+            public ParsedResponse body() throws IOException {
                 return get(link, params);
             }
         }.run(retries);
     }
-    public Client post(final String link, final Map<String,String> params,
+    public ParsedResponse post(final String link, final Map<String,String> params,
                        int retries) throws IOException {
-        return new RetryOnException<Client>() {
+        return new RetryOnException<ParsedResponse>() {
             @Override
-            public Client body() throws IOException {
+            public ParsedResponse body() throws IOException {
                 return post(link, params);
             }
         }.run(retries);
@@ -130,73 +118,6 @@ public abstract class Client {
 
     // Cancel current request
     public abstract void stop();
-
-    // Parse methods
-    public Document getPageContent() {
-        return document;
-    }
-
-    @NonNull public String getPage() {
-        return raw_document;
-    }
-
-    public int getResponseCode() {
-        return code;
-    }
-
-    public String parseMetaContent (String name) throws ParseException {
-        String value = null;
-
-        if (document == null) {
-            throw new ParseException("Document is null!", 0);
-        }
-
-        for (Element element : document.getElementsByTag("meta")) {
-            if (name.equalsIgnoreCase(element.attr("name")) ||
-                    name.equalsIgnoreCase(element.attr("http-equiv"))) {
-                value = element.attr("content");
-            }
-        }
-
-        if (value == null || value.isEmpty()) {
-            throw new ParseException("Meta tag '" + name + "' not found", 0);
-        }
-
-        return value;
-    }
-
-    public String parseMetaRedirect() throws ParseException {
-        String attr = parseMetaContent("refresh");
-        String link = attr.substring(
-                attr.indexOf(
-                        attr.toLowerCase().contains("; url=") ? "=" : ";"
-                ) + 1
-        );
-
-        if (link.isEmpty()) {
-            throw new ParseException("Meta redirect not found", 0);
-        }
-
-        // Check protocol of the URL
-        if (!(link.contains("http://") || link.contains("https://"))) {
-            link = "http://" + link;
-        }
-
-        return link;
-    }
-
-    public static Map<String,String> parseForm (Element form) {
-        Map<String,String> result = new HashMap<>();
-
-        for (Element input : form.getElementsByTag("input")) {
-            String value = input.attr("value");
-
-            if (value != null && !value.isEmpty())
-                result.put(input.attr("name"), value);
-        }
-
-        return result;
-    }
 
     // Convert methods
     protected static String requestToString (Map<String,String> params) {
@@ -224,5 +145,25 @@ public abstract class Client {
 
     public Client setRunningListener(Listener<Boolean> master) {
         running.subscribe(master); return this;
+    }
+
+    private abstract class RetryOnException<T> {
+        T run(int retries) throws IOException {
+            IOException last_ex = null;
+            for (int i = 0; i < retries; i++) {
+                try {
+                    return body();
+                } catch (IOException ex) {
+                    last_ex = ex;
+                    if (running.get()) {
+                        SystemClock.sleep(1000);
+                    } else {
+                        break;
+                    }
+                }
+            }
+            throw last_ex;
+        }
+        public abstract T body() throws IOException;
     }
 }

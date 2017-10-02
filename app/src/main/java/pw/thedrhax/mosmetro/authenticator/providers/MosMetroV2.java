@@ -41,6 +41,7 @@ import pw.thedrhax.mosmetro.authenticator.Task;
 import pw.thedrhax.mosmetro.authenticator.captcha.CaptchaRecognitionProxy;
 import pw.thedrhax.mosmetro.authenticator.captcha.CaptchaRequest;
 import pw.thedrhax.mosmetro.httpclient.Client;
+import pw.thedrhax.mosmetro.httpclient.ParsedResponse;
 import pw.thedrhax.mosmetro.httpclient.clients.OkHttp;
 import pw.thedrhax.util.Logger;
 
@@ -113,8 +114,8 @@ public class MosMetroV2 extends Provider {
                 Logger.log(context.getString(R.string.auth_redirect));
 
                 try {
-                    client.get(redirect, null, pref_retry_count);
-                    Logger.log(Logger.LEVEL.DEBUG, client.getPageContent().outerHtml());
+                    client.get(redirect, null, pref_retry_count).save();
+                    Logger.log(Logger.LEVEL.DEBUG, client.response().getPageContent().outerHtml());
                     return true;
                 } catch (IOException ex) {
                     Logger.log(Logger.LEVEL.DEBUG, ex);
@@ -142,8 +143,11 @@ public class MosMetroV2 extends Provider {
                 redirect = redirect_uri.getScheme() + "://" + redirect_uri.getHost();
 
                 try {
-                    client.get(redirect + "/auth?segment=" + vars.get("segment"), null, pref_retry_count);
-                    Logger.log(Logger.LEVEL.DEBUG, client.getPageContent().outerHtml());
+                    client.get(
+                            redirect + "/auth?segment=" + vars.get("segment"),
+                            null, pref_retry_count
+                    ).save();
+                    Logger.log(Logger.LEVEL.DEBUG, client.response().getPageContent().outerHtml());
                     return true;
                 } catch (IOException ex) {
                     Logger.log(Logger.LEVEL.DEBUG, ex);
@@ -162,18 +166,18 @@ public class MosMetroV2 extends Provider {
             private Element form = null;
 
             private boolean isCaptchaRequested() {
-                return client.getPageContent().location().contains("auto_auth");
+                return client.response().getPageContent().location().contains("auto_auth");
             }
 
             private boolean submit(String code) {
                 Logger.log(context.getString(R.string.auth_request));
 
-                Map<String,String> fields = Client.parseForm(form);
+                Map<String,String> fields = ParsedResponse.parseForm(form);
                 fields.put("_rucaptcha", code);
 
                 try {
-                    client.post(redirect + form.attr("action"), fields, pref_retry_count);
-                    Logger.log(Logger.LEVEL.DEBUG, client.getPageContent().toString());
+                    client.post(redirect + form.attr("action"), fields, pref_retry_count).save();
+                    Logger.log(Logger.LEVEL.DEBUG, client.response().getPageContent().toString());
                 } catch (IOException ex) {
                     Logger.log(Logger.LEVEL.DEBUG, ex);
                     Logger.log(context.getString(R.string.error,
@@ -216,7 +220,7 @@ public class MosMetroV2 extends Provider {
                     Logger.log(Logger.LEVEL.DEBUG, ex);
                 }
 
-                if (tmp_client.getResponseCode() == 401) {
+                if (tmp_client.response().getResponseCode() == 401) {
                     tmp_client.get(
                             new String(Base64.decode(
                                     "aHR0cHM6Ly9hbW13LndpLWZpLnJ1L25ldGluZm8vcmVnCg==",
@@ -232,7 +236,7 @@ public class MosMetroV2 extends Provider {
                     );
                 }
 
-                return tmp_client.getResponseCode() == 200 && isConnected();
+                return tmp_client.response().getResponseCode() == 200 && isConnected();
             }
 
             @Override
@@ -240,7 +244,7 @@ public class MosMetroV2 extends Provider {
                 if (!isCaptchaRequested()) return true;
 
                 // Parsing CAPTCHA form
-                form = client.getPageContent().getElementsByTag("form").first();
+                form = client.response().getPageContent().getElementsByTag("form").first();
 
                 if (form == null) { // No CAPTCHA form found => level 2 block
                     Logger.log(context.getString(R.string.auth_banned));
@@ -367,15 +371,15 @@ public class MosMetroV2 extends Provider {
                 Logger.log(context.getString(R.string.auth_auth_form));
 
                 try {
-                    String csrf_token = client.parseMetaContent("csrf-token");
+                    String csrf_token = client.response().parseMetaContent("csrf-token");
                     client.setHeader(Client.HEADER_CSRF, csrf_token);
                     client.setCookie(redirect, "afVideoPassed", "0");
 
                     client.post(
                             redirect + "/auth/init?mode=0&segment=" + vars.get("segment"),
                             null, pref_retry_count
-                    );
-                    Logger.log(Logger.LEVEL.DEBUG, client.getPageContent().outerHtml());
+                    ).save();
+                    Logger.log(Logger.LEVEL.DEBUG, client.response().getPageContent().outerHtml());
                 } catch (ProtocolException ignored) { // Too many follow-up requests
                 } catch (IOException | ParseException ex) {
                     Logger.log(Logger.LEVEL.DEBUG, ex);
@@ -403,7 +407,8 @@ public class MosMetroV2 extends Provider {
                 Logger.log(context.getString(R.string.auth_checking_connection));
 
                 try {
-                    JSONObject response = (JSONObject)new JSONParser().parse(client.getPage());
+                    JSONObject response = (JSONObject)new JSONParser()
+                            .parse(client.response().getPage());
 
                     if ((Boolean)response.get("result")) {
                         Logger.log(context.getString(R.string.auth_connected));
@@ -427,15 +432,15 @@ public class MosMetroV2 extends Provider {
     public boolean isConnected() {
         Client client = new OkHttp(context).followRedirects(false);
         try {
-            client.get("http://wi-fi.ru", null, pref_retry_count);
+            client.get("http://wi-fi.ru", null, pref_retry_count).save();
         } catch (IOException ex) {
             Logger.log(Logger.LEVEL.DEBUG, ex);
             return false;
         }
 
         try {
-            redirect = client.parseMetaRedirect();
-            Logger.log(Logger.LEVEL.DEBUG, client.getPageContent().outerHtml());
+            redirect = client.response().parseMetaRedirect();
+            Logger.log(Logger.LEVEL.DEBUG, client.response().getPageContent().outerHtml());
             Logger.log(Logger.LEVEL.DEBUG, redirect);
         } catch (ParseException ex) {
             // Redirect not found => connected
@@ -448,13 +453,12 @@ public class MosMetroV2 extends Provider {
 
     /**
      * Checks if current network is supported by this Provider implementation.
-     * @param client    Client instance to get the information from. Provider.find()
-     *                  will execute one request to be analyzed by this method.
+     * @param response  Instance of ParsedResponse.
      * @return          True if response matches this Provider implementation.
      */
-    public static boolean match(Client client) {
+    public static boolean match(ParsedResponse response) {
         try {
-            String redirect = client.parseMetaRedirect();
+            String redirect = response.parseMetaRedirect();
             return redirect.contains(".wi-fi.ru") && !redirect.contains("login.wi-fi.ru");
         } catch (ParseException ex) {
             return false;
