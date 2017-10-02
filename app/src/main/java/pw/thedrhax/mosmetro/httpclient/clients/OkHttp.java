@@ -94,8 +94,6 @@ public class OkHttp extends Client {
     }
 
     private Response call(Request.Builder builder) throws IOException {
-        random.delay(running);
-
         // Populate headers
         for (String name : headers.keySet()) {
             builder.addHeader(name, getHeader(name));
@@ -111,9 +109,7 @@ public class OkHttp extends Client {
 
     @Override
     public ParsedResponse get(String link, Map<String, String> params) throws IOException {
-        Response response = call(new Request.Builder().url(link + requestToString(params)).get());
-        setHeader(HEADER_REFERER, link);
-        return parse(link, response);
+        return parse(link, call(new Request.Builder().url(link + requestToString(params)).get()));
     }
 
     @Override
@@ -127,9 +123,7 @@ public class OkHttp extends Client {
             }
         }
 
-        Response response = call(new Request.Builder().url(link).post(body.build()));
-        setHeader(HEADER_REFERER, link);
-        return parse(link, response);
+        return parse(link, call(new Request.Builder().url(link).post(body.build())));
     }
 
     @Override

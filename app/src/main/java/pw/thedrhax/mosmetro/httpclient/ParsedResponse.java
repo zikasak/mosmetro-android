@@ -18,31 +18,44 @@
 
 package pw.thedrhax.mosmetro.httpclient;
 
+import android.net.Uri;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+
+import pw.thedrhax.util.Logger;
 
 public class ParsedResponse {
     private Client client;
+    private String url;
     private String html;
     private Document document;
     private int code;
 
     public ParsedResponse(Client client, String url, String html, int code) {
         this.client = client;
+        this.url = url;
         this.html = html;
 
         if (html != null && !html.isEmpty()) {
             document = Jsoup.parse(html, url);
 
-            // Clean-up useless tags: <script>, <style>
-            document.getElementsByTag("script").remove();
+            // Clean-up useless tags: <script> without src, <style>
+            for (Element element : document.getElementsByTag("script")) {
+                if (!element.hasAttr("src")) {
+                    element.remove();
+                }
+            }
             document.getElementsByTag("style").remove();
         }
 
@@ -56,6 +69,20 @@ public class ParsedResponse {
     public Client save() {
         if (client != null) {
             client.last_response = this;
+            client.setHeader(Client.HEADER_REFERER, url);
+
+            if (PreferenceManager
+                    .getDefaultSharedPreferences(client.context)
+                    .getBoolean("pref_load_resources", true)) {
+
+                for (String link : parseResourceList()) {
+                    Logger.log(this, link);
+                    try {
+                        client.get(link, null);
+                    } catch (IOException ignored) {}
+                }
+            }
+
             return client;
         } else {
             throw new RuntimeException("This ParsedResponse is not attached to any Client!");
@@ -114,6 +141,55 @@ public class ParsedResponse {
         }
 
         return link;
+    }
+
+    public static String removePathFromUrl(String url) {
+        Uri base_uri = Uri.parse(url);
+        return base_uri.getScheme() + "://" + base_uri.getHost();
+    }
+
+    private static String absolutePathToUrl(String base_url, String path) throws ParseException {
+        String base = removePathFromUrl(base_url);
+
+        if (path.startsWith("/")) {
+            return base + path;
+        } else if (path.startsWith("http")) {
+            return path;
+        } else {
+            throw new ParseException("Malformed URL: " + path, 0);
+        }
+    }
+
+    public List<String> parseResourceList() {
+        LinkedList<String> links = new LinkedList<>();
+
+        if (document == null) {
+            return links;
+        }
+
+        // <link href="..." />
+        for (Element element : document.getElementsByTag("link")) {
+            if (element.hasAttr("href"))
+                links.add(element.attr("href"));
+        }
+
+        // <script src="..." />
+        for (Element element : document.getElementsByTag("script")) {
+            if (element.hasAttr("src"))
+                links.add(element.attr("src"));
+        }
+
+        // Absolute path to full URL
+        LinkedList<String> result = new LinkedList<>();
+        for (String link : links) {
+            try {
+                result.add(absolutePathToUrl(document.location(), link));
+            } catch (ParseException ex) {
+                Logger.log(Logger.LEVEL.DEBUG, ex);
+            }
+        }
+
+        return result;
     }
 
     public static Map<String,String> parseForm (Element form) {

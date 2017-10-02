@@ -220,4 +220,6 @@
     <string name="pref_delay_max_summary">Максимальное значение случайной задержки перед запросом.</string>
     <string name="pref_delay_min">Минимальная задержка</string>
     <string name="pref_delay_min_summary">Минимальное значение случайной задержки перед запросом.</string>
+    <string name="pref_load_resources">Имитация загрузки ресурсов</string>
+    <string name="pref_load_resources_summary">Скачивать все ресурсы, включённые в HTML-страницу, для более точной имитации поведения браузера.</string>
 </resources>

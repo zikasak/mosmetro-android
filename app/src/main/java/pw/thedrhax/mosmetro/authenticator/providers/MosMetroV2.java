@@ -139,8 +139,7 @@ public class MosMetroV2 extends Provider {
             public boolean run(HashMap<String, Object> vars) {
                 Logger.log(context.getString(R.string.auth_auth_page));
 
-                Uri redirect_uri = Uri.parse(redirect);
-                redirect = redirect_uri.getScheme() + "://" + redirect_uri.getHost();
+                redirect = ParsedResponse.removePathFromUrl(redirect);
 
                 try {
                     client.get(
