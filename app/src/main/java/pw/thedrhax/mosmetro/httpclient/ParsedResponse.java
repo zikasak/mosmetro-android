@@ -158,7 +158,9 @@ public class ParsedResponse {
     private static String absolutePathToUrl(String base_url, String path) throws ParseException {
         String base = removePathFromUrl(base_url);
 
-        if (path.startsWith("/")) {
+        if (path.startsWith("//")) {
+            return Uri.parse(base_url).getScheme() + ":" + path;
+        } else if (path.startsWith("/")) {
             return base + path;
         } else if (path.startsWith("http")) {
             return path;
