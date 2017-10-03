@@ -18,15 +18,27 @@
 
 package pw.thedrhax.mosmetro.httpclient.clients;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import okhttp3.Call;
 import okhttp3.Cookie;
@@ -50,6 +62,50 @@ public class OkHttp extends Client {
         super(context);
         client = new OkHttpClient.Builder().cookieJar(new InterceptedCookieJar()).build();
         configure();
+    }
+
+    @Override
+    public Client trustAllCerts() {
+        X509TrustManager tm = new X509TrustManager() {
+            @SuppressLint("TrustAllX509TrustManager")
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType)
+                    throws CertificateException {}
+
+            @SuppressLint("TrustAllX509TrustManager")
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType)
+                    throws CertificateException {}
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                return new X509Certificate[]{};
+            }
+        };
+
+        SSLSocketFactory socketFactory;
+        try {
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, new TrustManager[]{tm}, new java.security.SecureRandom());
+            socketFactory = sslContext.getSocketFactory();
+        } catch (NoSuchAlgorithmException | KeyManagementException ex) {
+            return this;
+        }
+
+        HostnameVerifier hostnameVerifier = new HostnameVerifier() {
+            @SuppressLint("BadHostnameVerifier")
+            @Override
+            public boolean verify(String hostname, SSLSession session) {
+                return true;
+            }
+        };
+
+        client = client.newBuilder()
+                .hostnameVerifier(hostnameVerifier)
+                .sslSocketFactory(socketFactory, tm)
+                .build();
+
+        return this;
     }
 
     @Override
@@ -152,7 +208,7 @@ public class OkHttp extends Client {
             throw new IOException("Response body is null! Code: " + response.code());
         }
 
-        return new ParsedResponse(this, link, body.string(), response.code());
+        return new ParsedResponse(this, link, body.string(), response.code(), null);
     }
 
     private class InterceptedCookieJar implements CookieJar {

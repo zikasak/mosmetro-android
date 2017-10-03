@@ -41,7 +41,7 @@ public abstract class Client {
     protected Map<String,String> headers = new HashMap<>();
     protected Context context;
     protected Randomizer random;
-    protected ParsedResponse last_response = new ParsedResponse(this, "", "", 200);
+    protected ParsedResponse last_response = new ParsedResponse(this, "", "", 200, null);
 
     protected Client(Context context) {
         this.context = context;
@@ -59,6 +59,7 @@ public abstract class Client {
     }
 
     // Settings methods
+    public abstract Client trustAllCerts();
     public abstract Client followRedirects(boolean follow);
 
     public Client setHeader (String name, String value) {

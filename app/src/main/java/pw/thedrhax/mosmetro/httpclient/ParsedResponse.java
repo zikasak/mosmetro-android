@@ -21,6 +21,7 @@ package pw.thedrhax.mosmetro.httpclient;
 import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -41,8 +42,10 @@ public class ParsedResponse {
     private String html;
     private Document document;
     private int code;
+    private Map<String,List<String>> headers = new HashMap<>();
 
-    public ParsedResponse(Client client, String url, String html, int code) {
+    public ParsedResponse(Client client, @Nullable String url, @Nullable String html,
+                          int code, @Nullable Map<String,List<String>> headers) {
         this.client = client;
         this.url = url;
         this.html = html;
@@ -60,10 +63,14 @@ public class ParsedResponse {
         }
 
         this.code = code;
+
+        if (headers != null){
+            this.headers.putAll(headers);
+        }
     }
 
     public ParsedResponse(String html) {
-        this(null, "", html, 200);
+        this(null, "", html, 200, null);
     }
 
     public Client save() {
@@ -203,5 +210,24 @@ public class ParsedResponse {
         }
 
         return result;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("URL: ").append(" ").append(url).append("\n");
+        builder.append("Response code: ").append(code).append("\n");
+
+        for (String header : headers.keySet()) {
+            for (String value : headers.get(header)) {
+                builder.append(header).append(": ").append(value).append("\n");
+            }
+        }
+
+        if (document != null) {
+            builder.append(document.outerHtml());
+        }
+
+        return builder.toString();
     }
 }
