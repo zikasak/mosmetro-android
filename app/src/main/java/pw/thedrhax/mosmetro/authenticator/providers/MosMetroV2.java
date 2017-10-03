@@ -430,16 +430,17 @@ public class MosMetroV2 extends Provider {
     @Override
     public boolean isConnected() {
         Client client = new OkHttp(context).followRedirects(false);
+        ParsedResponse response;
         try {
-            client.get("http://wi-fi.ru", null, pref_retry_count).save();
+            response = client.get("http://wi-fi.ru", null, pref_retry_count);
         } catch (IOException ex) {
             Logger.log(Logger.LEVEL.DEBUG, ex);
             return false;
         }
 
         try {
-            redirect = client.response().parseMetaRedirect();
-            Logger.log(Logger.LEVEL.DEBUG, client.response().getPageContent().outerHtml());
+            redirect = response.parseMetaRedirect();
+            Logger.log(Logger.LEVEL.DEBUG, response.getPageContent().outerHtml());
             Logger.log(Logger.LEVEL.DEBUG, redirect);
         } catch (ParseException ex) {
             // Redirect not found => connected
@@ -447,6 +448,7 @@ public class MosMetroV2 extends Provider {
         }
 
         // Redirect found => not connected
+        response.save();
         return false;
     }
 
