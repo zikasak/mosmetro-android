@@ -105,8 +105,9 @@ public class ParsedResponse {
         return code;
     }
 
+    @NonNull
     public Document getPageContent() {
-        return document;
+        return document != null ? document : Jsoup.parse("<html></html>");
     }
 
     public String parseMetaContent (String name) throws ParseException {

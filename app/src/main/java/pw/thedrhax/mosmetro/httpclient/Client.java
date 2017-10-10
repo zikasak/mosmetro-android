@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import pw.thedrhax.util.Listener;
-import pw.thedrhax.util.RandomUserAgent;
 import pw.thedrhax.util.Randomizer;
 import pw.thedrhax.util.Util;
 
@@ -50,7 +49,7 @@ public abstract class Client {
     protected void configure() {
         random = new Randomizer(context);
 
-        setHeader(HEADER_USER_AGENT, RandomUserAgent.getRandomUserAgent());
+        setHeader(HEADER_USER_AGENT, random.cached_useragent());
         setHeader(HEADER_ACCEPT, "text/html,application/xhtml+xml," +
                 "application/xml;q=0.9,image/webp,*/*;q=0.8");
 
@@ -165,7 +164,11 @@ public abstract class Client {
                     }
                 }
             }
-            throw last_ex;
+            if (last_ex != null) {
+                throw last_ex;
+            } else {
+                throw new IOException("Unknown exception (retries=" + retries + ")");
+            }
         }
         public abstract T body() throws IOException;
     }

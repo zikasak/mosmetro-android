@@ -222,4 +222,6 @@
     <string name="pref_delay_min_summary">Минимальное значение случайной задержки перед запросом.</string>
     <string name="pref_load_resources">Имитация загрузки ресурсов</string>
     <string name="pref_load_resources_summary">Скачивать все ресурсы, включённые в HTML-страницу, для более точной имитации поведения браузера.</string>
+    <string name="pref_user_agent">Заголовок User-Agent</string>
+    <string name="pref_user_agent_summary">Заголовок HTTP User-Agent используется для маскировки приложения под браузер. По умолчанию выбирается случайное значение.</string>
 </resources>
