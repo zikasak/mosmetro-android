@@ -148,6 +148,10 @@ public class ParsedResponse {
             link = "http://" + link;
         }
 
+        if (link.contains("?"))
+            if (!link.substring(link.indexOf("://") + 3, link.indexOf("?")).contains("/"))
+                link = link.replace("?", "/?");
+
         return link;
     }
 
