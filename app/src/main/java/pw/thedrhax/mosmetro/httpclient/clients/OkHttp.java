@@ -208,7 +208,10 @@ public class OkHttp extends Client {
             throw new IOException("Response body is null! Code: " + response.code());
         }
 
-        return new ParsedResponse(this, link, body.string(), response.code(), null);
+        return new ParsedResponse(
+                this, link, body.string(),
+                response.code(), response.headers().toMultimap()
+        );
     }
 
     private class InterceptedCookieJar implements CookieJar {
