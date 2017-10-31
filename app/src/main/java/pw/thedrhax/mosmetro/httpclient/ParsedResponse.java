@@ -80,7 +80,7 @@ public class ParsedResponse {
 
             if (PreferenceManager
                     .getDefaultSharedPreferences(client.context)
-                    .getBoolean("pref_load_resources", true)) {
+                    .getBoolean("pref_load_resources", false)) {
 
                 for (String link : parseResourceList()) {
                     Logger.log(this, link);
