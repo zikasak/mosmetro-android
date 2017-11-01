@@ -18,7 +18,12 @@
 
 package pw.thedrhax.mosmetro.httpclient;
 
+import android.content.Context;
+import android.support.test.InstrumentationRegistry;
+
 import junit.framework.TestCase;
+
+import pw.thedrhax.mosmetro.httpclient.clients.OkHttp;
 
 /**
  * A collection of the Client class tests
@@ -26,6 +31,8 @@ import junit.framework.TestCase;
  * @see pw.thedrhax.mosmetro.httpclient.Client
  */
 public class ParsedResponseTest extends TestCase {
+    private Context context = InstrumentationRegistry.getContext();
+
     public void testParseMetaRedirect() throws Exception {
         assertEquals("no delay, valid URL",
                 "https://example.com/?test=123",
@@ -68,5 +75,12 @@ public class ParsedResponseTest extends TestCase {
                         "<meta name=\"refresh\" content=\"https://example.com/?test=123\" />"
                 ).parseMetaRedirect()
         );
+    }
+
+    public void testLocation() throws Exception {
+        Client client = new OkHttp(context);
+        ParsedResponse response = client.get("http://httpbin.org/redirect-to?" +
+                                             "url=https://thedrhax.pw/", null);
+        assertEquals("https://thedrhax.pw/", response.getPageContent().location());
     }
 }

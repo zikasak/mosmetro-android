@@ -165,7 +165,7 @@ public class OkHttp extends Client {
 
     @Override
     public ParsedResponse get(String link, Map<String, String> params) throws IOException {
-        return parse(link, call(new Request.Builder().url(link + requestToString(params)).get()));
+        return parse(call(new Request.Builder().url(link + requestToString(params)).get()));
     }
 
     @Override
@@ -179,7 +179,7 @@ public class OkHttp extends Client {
             }
         }
 
-        return parse(link, call(new Request.Builder().url(link).post(body.build())));
+        return parse(call(new Request.Builder().url(link).post(body.build())));
     }
 
     @Override
@@ -201,7 +201,7 @@ public class OkHttp extends Client {
         }
     }
 
-    private ParsedResponse parse(String link, Response response) throws IOException {
+    private ParsedResponse parse(Response response) throws IOException {
         ResponseBody body = response.body();
 
         if (body == null) {
@@ -209,7 +209,7 @@ public class OkHttp extends Client {
         }
 
         return new ParsedResponse(
-                this, link, body.string(),
+                this, response.request().url().toString(), body.string(),
                 response.code(), response.headers().toMultimap()
         );
     }
