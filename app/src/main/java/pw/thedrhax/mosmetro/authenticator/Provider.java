@@ -29,7 +29,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import pw.thedrhax.mosmetro.R;
-import pw.thedrhax.mosmetro.authenticator.providers.Enforta;
 import pw.thedrhax.mosmetro.authenticator.providers.MosMetroV1;
 import pw.thedrhax.mosmetro.authenticator.providers.MosMetroV2;
 import pw.thedrhax.mosmetro.authenticator.providers.Unknown;
@@ -66,7 +65,6 @@ public abstract class Provider extends LinkedList<Task> {
             new LinkedList<Class<? extends Provider>>() {{
                 add(MosMetroV1.class);
                 add(MosMetroV2.class);
-                add(Enforta.class);
             }};
 
     /**

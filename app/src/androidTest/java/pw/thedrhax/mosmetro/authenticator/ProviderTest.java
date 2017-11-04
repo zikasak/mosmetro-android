@@ -24,7 +24,6 @@ import android.support.test.InstrumentationRegistry;
 import junit.framework.TestCase;
 
 import pw.thedrhax.httpclient.clients.DummyClient;
-import pw.thedrhax.mosmetro.authenticator.providers.Enforta;
 import pw.thedrhax.mosmetro.authenticator.providers.MosMetroV1;
 import pw.thedrhax.mosmetro.authenticator.providers.MosMetroV2;
 import pw.thedrhax.mosmetro.authenticator.providers.Unknown;
@@ -59,15 +58,6 @@ public class ProviderTest extends TestCase {
                 )).getClass(),
 
                 MosMetroV2.class
-        );
-
-        assertEquals("Enforta detection",
-                Provider.find(context, new DummyClient(
-                        "<meta http-equiv=\"refresh\" content=\"0; " +
-                                "URL=http://...enforta.ru/...\" />"
-                )).getClass(),
-
-                Enforta.class
         );
 
         assertEquals("Empty response",

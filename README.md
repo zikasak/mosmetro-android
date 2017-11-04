@@ -12,12 +12,14 @@
 | --- | --- | --- | --- | --- |
 | MosMetro_Free | [МаксимаТелеком](http://maximatelecom.ru/ru#/) | Метро | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV2.java) |
 | AURA | [МаксимаТелеком](http://maximatelecom.ru/ru#/) | Метро, Аэроэкспресс (?) | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV2.java) |
-| MosMetro_Free | [NetByNet](http://www.netbynet.ru) | МЦК | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV1.java) |
+| MosMetro_Free | [NetByNet](http://www.netbynet.ru) | МЦК | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV2.java) |
 | MosGorTrans_Free | [NetByNet](http://www.netbynet.ru) | Автобусы | :white_check_mark: | [MosMetro v1](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV1.java) |
-| MosGorTrans_Free | [Enforta](http://www.enforta.ru/) | Остановки | :no_entry: | [MosGorTrans](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/Unknown.java) |
+| MT_FREE | [Enforta](http://www.enforta.ru/) | Остановки | :large_blue_circle: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV2.java) |
 | MT_FREE, MT_FREE_ | [МаксимаТелеком](http://maximatelecom.ru/ru#/) + [NetByNet](http://www.netbynet.ru) | Метро, Автобусы, ... | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV2.java) |
 | Air_WiFi_Free | [МаксимаТелеком](http://maximatelecom.ru/ru#/) | Аэропорт Внуково | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV2.java) |
 | CPPK_Free | [МаксимаТелеком](http://maximatelecom.ru/ru#/) | Пригородные поезда | :white_check_mark: | [MosMetro v2](/app/src/main/java/pw/thedrhax/mosmetro/authenticator/providers/MosMetroV1.java) |
+
+> Таблица сильно устарела. В данный момент классификация по SSID не имеет смысла, так как почти все сети пришли к единому названию "MT_FREE" и постепенно переходят у общему алгоритму, который в рамках этого проекта называется MosMetroV2.
 
 ## Сборка
 
