@@ -383,6 +383,7 @@ public class SettingsActivity extends Activity {
 
     @RequiresApi(28)
     private void location_permission_setup() {
+<<<<<<< HEAD
         Context context = this;
         boolean location_denied = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
                 PackageManager.PERMISSION_DENIED;
@@ -396,30 +397,55 @@ public class SettingsActivity extends Activity {
                             ((SettingsActivity) context)
                                     .requestPermissions(new String[] {Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
                         }
+=======
+        final PermissionUtils pu = new PermissionUtils(this);
+
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.location_permission)
+                .setMessage(R.string.location_permission_saving)
+                .setPositiveButton(R.string.permission_request, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        pu.requestCoarseLocation();
+>>>>>>> pr/1
                     }
                 })
                 .setNeutralButton(R.string.open_settings, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+<<<<<<< HEAD
                         Intent intent = new Intent();
                         intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                         Uri uri = Uri.fromParts("package", getPackageName(), null);
                         intent.setData(uri);
                         startActivity(intent);
+=======
+                        pu.openAppSettings();
+>>>>>>> pr/1
                     }
                 })
                 .setNegativeButton(R.string.ignore, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         settings.edit()
+<<<<<<< HEAD
                                 .putBoolean("pref_location_settings_ignore", true)
+=======
+                                .putBoolean("pref_location_ignore", true)
+>>>>>>> pr/1
                                 .apply();
                         dialog.dismiss();
                     }
                 });
 
+<<<<<<< HEAD
         if (!settings.getBoolean("pref_location_settings_ignore", false) && location_denied)
             dialog.show();
+=======
+        if (!settings.getBoolean("pref_location_ignore", false))
+            if (!pu.isCoarseLocationGranted())
+                dialog.show();
+>>>>>>> pr/1
     }
 
     private void replaceFragment(String id, Fragment fragment) {
